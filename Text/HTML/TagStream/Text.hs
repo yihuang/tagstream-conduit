@@ -6,7 +6,7 @@ import Control.Monad (unless)
 
 import Data.Monoid (mconcat)
 import Data.Char (isSpace)
-import Data.Text (Text)
+import Data.Text.Lazy (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
 import qualified Data.Text.Lazy.Builder as B
@@ -23,7 +23,7 @@ type Attr = Attr' Text
  - match quoted string, can fail.
  -}
 quoted :: Char -> Parser Text
-quoted q = T.append <$> takeTill (in2 ('\\',q))
+quoted q = L.append <$> (L.fromStrict <$> takeTill (in2 ('\\',q)))
                     <*> ( char q *> pure ""
                       <|> char '\\' *> atLeast 1 (quoted q) )
 
@@ -35,7 +35,7 @@ quotedOr p = maybeP (satisfy (in2 ('"','\''))) >>=
  - attribute value, can't fail.
  -}
 attrValue :: Parser Text
-attrValue = quotedOr $ takeTill ((=='>') ||. isSpace)
+attrValue = quotedOr $ L.fromStrict <$> takeTill ((=='>') ||. isSpace)
 
 {--
  - attribute name, at least one char, can fail when meet tag end.
@@ -43,8 +43,8 @@ attrValue = quotedOr $ takeTill ((=='>') ||. isSpace)
  -}
 attrName :: Parser Text
 attrName = quotedOr $
-             T.cons <$> satisfy (/='>')
-                    <*> takeTill (in3 ('/','>','=') ||. isSpace)
+             L.cons <$> satisfy (/='>')
+                    <*> (L.fromStrict <$> takeTill (in3 ('/','>','=') ||. isSpace))
 
 {--
  - tag end, return self-close or not, can fail.
@@ -79,7 +79,7 @@ attrs = loop []
  -}
 comment :: Parser Token
 comment = Comment <$> comment'
-  where comment' = T.append <$> takeTill (=='-')
+  where comment' = L.append <$> (L.fromStrict <$> takeTill (=='-'))
                             <*> ( string "-->" *> return ""
                               <|> atLeast 1 comment' )
 
@@ -88,10 +88,10 @@ comment = Comment <$> comment'
  -}
 special :: Parser Token
 special = Special
-          <$> ( T.cons <$> satisfy (not . ((=='-') ||. isSpace))
-                       <*> takeTill ((=='>') ||. isSpace)
-                       <* skipSpace )
-          <*> takeTill (=='>') <* char '>'
+          <$> ( L.cons <$> satisfy (not . ((=='-') ||. isSpace))
+                       <*> (L.fromStrict <$> takeTill ((=='>') ||. isSpace))
+                       <*  skipSpace )
+          <*> (L.fromStrict <$> takeTill (=='>') <* char '>')
 
 {--
  - parse a tag, can fail.
@@ -103,12 +103,12 @@ tag = do
          <|> return TagTypeNormal
     case t of
         TagTypeClose ->
-            TagClose <$> takeTill (=='>')
+            TagClose . L.fromStrict <$> takeTill (=='>')
             <* char '>'
         TagTypeSpecial -> boolP (string "--") >>=
                           cond comment special
         TagTypeNormal -> do
-            name <- takeTill (in3 ('<','>','/') ||. isSpace)
+            name <- L.fromStrict <$> takeTill (in3 ('<','>','/') ||. isSpace)
             (as, close) <- attrs
             skipSpace
             return $ TagOpen name as close
@@ -117,13 +117,13 @@ tag = do
  - record incomplete tag for streamline processing.
  -}
 incomplete :: Parser Token
-incomplete = Incomplete . T.cons '<' <$> takeText
+incomplete = Incomplete . L.cons '<' <$> takeLazyText
 
 {--
  - parse text node. consume at least one char, to make sure progress.
  -}
 text :: Parser Token
-text = Text <$> atLeast 1 (takeTill (=='<'))
+text = Text <$> atLeast 1 (L.fromStrict <$> takeTill (=='<'))
 
 token :: Parser Token
 token = char '<' *> (tag <|> incomplete)
@@ -134,9 +134,9 @@ token = char '<' *> (tag <|> incomplete)
  -}
 tillScriptEnd :: Token -> Parser [Token]
 tillScriptEnd t = reverse <$> loop [t]
-              <|> (:[]) . Incomplete . T.append script <$> takeText
+              <|> (:[]) . Incomplete . L.append script <$> takeLazyText
   where
-    script = L.toStrict . B.toLazyText $ showToken id t
+    script = B.toLazyText $ showToken id t
     loop acc = (:acc) <$> scriptEnd
            <|> (text >>= loop . (:acc))
     scriptEnd = string "</script>" *> return (TagClose "script")
@@ -153,7 +153,7 @@ html = tokens <|> pure []
                 -> (++) <$> tillScriptEnd t <*> html
             _ -> (t:) <$> html
 
-decode :: Text -> Either String [Token]
+decode :: T.Text -> Either String [Token]
 decode = parseOnly html
 
 {--
@@ -162,7 +162,7 @@ decode = parseOnly html
 
 atLeast :: Int -> Parser Text -> Parser Text
 atLeast 0 p = p
-atLeast n p = T.cons <$> anyChar <*> atLeast (n-1) p
+atLeast n p = L.cons <$> anyChar <*> atLeast (n-1) p
 
 cond :: a -> a -> Bool -> a
 cond a1 a2 b = if b then a1 else a2
@@ -185,7 +185,7 @@ maybeP p = Just <$> p <|> return Nothing
 
 -- {{{ encode tokens
 cc :: [Text] -> B.Builder
-cc = mconcat . map B.fromText
+cc = mconcat . map B.fromLazyText
 
 showToken :: (Text -> Text) -> Token -> B.Builder
 showToken hl (TagOpen name as close) =
@@ -194,30 +194,30 @@ showToken hl (TagOpen name as close) =
       ++ [hl (if close then "/>" else ">")]
   where
     showAttr :: Attr -> Text
-    showAttr (key, value) = T.concat $ [" ", key, hl "=\""] ++ map escape (T.unpack value) ++ [hl "\""]
+    showAttr (key, value) = L.concat $ [" ", key, hl "=\""] ++ map escape (L.unpack value) ++ [hl "\""]
     escape '"' = "\\\""
     escape '\\' = "\\\\"
-    escape c = T.singleton c
+    escape c = L.singleton c
 showToken hl (TagClose name) = cc [hl "</", name, hl ">"]
-showToken _ (Text s) = B.fromText s
+showToken _ (Text s) = B.fromLazyText s
 showToken hl (Comment s) = cc [hl "<!--", s, hl "-->"]
 showToken hl (Special name s) = cc [hl "<!", name, " ", s, hl ">"]
-showToken _ (Incomplete s) = B.fromText s
+showToken _ (Incomplete s) = B.fromLazyText s
 -- }}}
 
 -- {{{ Stream
-tokenStream :: Monad m => GInfConduit Text m Token
+tokenStream :: Monad m => GInfConduit T.Text m Token
 tokenStream =
-    loop T.empty
+    loop L.empty
   where
     loop accum = awaitE >>= either (close accum) (push accum)
 
     push accum input =
-        case parseOnly html (accum `T.append` input) of
+        case parseOnly html (L.toStrict accum `T.append` input) of
             Right (splitAccum -> (accum', tokens)) -> mapM_ yield tokens >> loop accum'
             Left err -> fail err
 
     close s r = do
-        unless (T.null s) $ yield $ Text s
+        unless (L.null s) $ yield $ Text s
         return r
 -- }}}
