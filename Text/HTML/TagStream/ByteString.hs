@@ -12,7 +12,7 @@ import Data.Conduit (GInfConduit, awaitE, yield)
 
 import qualified Blaze.ByteString.Builder as B
 import Text.HTML.TagStream.Types
-import Text.HTML.TagStream.Utils (splitAccum)
+import Text.HTML.TagStream.Utils (splitAccum, cons)
 
 type Token = Token' ByteString
 type Attr = Attr' ByteString
@@ -41,8 +41,8 @@ attrValue = quotedOr $ takeTill ((=='>') ||. isSpace)
  -}
 attrName :: Parser ByteString
 attrName = quotedOr $
-             S.cons <$> satisfy (/='>')
-                    <*> takeTill (in3 ('/','>','=') ||. isSpace)
+             cons <$> satisfy (/='>')
+                  <*> takeTill (in3 ('/','>','=') ||. isSpace)
 
 {--
  - tag end, return self-close or not, can fail.
@@ -86,7 +86,7 @@ comment = Comment <$> comment'
  -}
 special :: Parser Token
 special = Special
-          <$> ( S.cons <$> satisfy (not . ((=='-') ||. isSpace))
+          <$> ( cons <$> satisfy (not . ((=='-') ||. isSpace))
                        <*> takeTill ((=='>') ||. isSpace)
                        <* skipSpace )
           <*> takeTill (=='>') <* char '>'
@@ -96,8 +96,8 @@ special = Special
  -}
 tag :: Parser Token
 tag = do
-    t <-    string "/"     *> return TagTypeClose
-        <|> string "!" *> return TagTypeSpecial
+    t <-    char '/' *> return TagTypeClose
+        <|> char '!' *> return TagTypeSpecial
         <|> return TagTypeNormal
     case t of
         TagTypeClose ->
@@ -115,7 +115,7 @@ tag = do
  - record incomplete tag for streamline processing.
  -}
 incomplete :: Parser Token
-incomplete = Incomplete . S.cons '<' <$> takeByteString
+incomplete = Incomplete . cons '<' <$> takeByteString
 
 {--
  - parse text node. consume at least one char, to make sure progress.
@@ -160,7 +160,7 @@ decode = parseOnly html
 
 atLeast :: Int -> Parser ByteString -> Parser ByteString
 atLeast 0 p = p
-atLeast n p = S.cons <$> anyChar <*> atLeast (n-1) p
+atLeast n p = cons <$> anyChar <*> atLeast (n-1) p
 
 cond :: a -> a -> Bool -> a
 cond a1 a2 b = if b then a1 else a2
