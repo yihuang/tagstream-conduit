@@ -19,20 +19,55 @@ Extra-source-files:    tests/Tests.hs
                      , Parse.hs
                      , HighlightText.hs
                      , ParseText.hs
-Cabal-version:       >=1.8
+Cabal-version:       >=1.25
 
 source-repository head
   type:     git
   location: git://github.com/yihuang/tagstream-conduit
+
+library types
+  exposed-modules: Text.HTML.TagStream.Types
+                 , Str.ByteString
+                 , Str.Text
+                 , Builder.ByteString
+                 , Builder.Text
+                 , Parser.ByteString
+                 , Parser.Text
+  hs-source-dirs: types
+  build-depends:       base >= 4 && < 5
+                     , bytestring
+                     , text
+                     , conduit >= 1.2
+                     , conduit-extra >= 1.1.0
+                     , resourcet
+                     , attoparsec >= 0.10
+                     , blaze-builder
+                     , xml-conduit >= 1.1.0.0
+                     , data-default >= 0.5.0
+
+library entities
+  required-signatures: Str, Builder, Parser
+  exposed-modules: Entities
+  hs-source-dirs: entities
+  build-depends:       base >= 4 && < 5
+                     , bytestring
+                     , text
+                     , case-insensitive
+                     , transformers >= 0.2
+                     , conduit >= 1.2
+                     , conduit-extra >= 1.1.0
+                     , resourcet
+                     , attoparsec >= 0.10
+                     , blaze-builder
+                     , xml-conduit >= 1.1.0.0
+                     , data-default >= 0.5.0
+                     , types
 
 Library
   GHC-Options:       -Wall -O2
   Exposed-modules:     Text.HTML.TagStream
                      , Text.HTML.TagStream.ByteString
                      , Text.HTML.TagStream.Text
-                     , Text.HTML.TagStream.Types
-                     , Text.HTML.TagStream.Utils
-                     , Text.HTML.TagStream.Entities
   Build-depends:       base >= 4 && < 5
                      , bytestring
                      , text
@@ -45,6 +80,10 @@ Library
                      , blaze-builder
                      , xml-conduit >= 1.1.0.0
                      , data-default >= 0.5.0
+                     , types
+                     , entities
+  backpack-includes: entities (Entities as Entities.ByteString) requires (Str as Str.ByteString, Builder as Builder.ByteString, Parser as Parser.ByteString)
+  backpack-includes: entities (Entities as Entities.Text) requires (Str as Str.Text, Builder as Builder.Text, Parser as Parser.Text)
 
 test-suite test
     hs-source-dirs: tests

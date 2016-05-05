@@ -1,0 +1,20 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+module Parser where
+
+import Control.Applicative
+import Str
+
+data Parser a
+instance Functor Parser
+instance Applicative Parser
+instance Monad Parser
+instance Alternative Parser
+
+anyChar  :: Parser Char
+takeTill :: (Char -> Bool) -> Parser Str
+char     :: Char -> Parser Char
+satisfy  :: (Char -> Bool) -> Parser Char
+string   :: Str -> Parser Str
+skipSpace :: Parser ()
+takeRest :: Parser Str
+parseOnly :: Parser a -> Str -> Either String a
