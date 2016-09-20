@@ -1,6 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | HTML entity decoding.
 
@@ -19,10 +20,12 @@ import Text.HTML.TagStream.Types
 
 import qualified Data.Conduit.List as CL
 import Data.Maybe (fromMaybe, isJust)
-import Control.Arrow (first)
+import Control.Arrow (first, second)
+import Data.Functor.Identity (runIdentity)
 
 -- | A conduit to decode entities from a stream of tokens into a new stream of tokens.
-decodeEntities :: (Monad m
+decodeEntities :: forall m builder string.
+                  (Monad m
                   ,Monoid builder
                   ,Monoid string
                   ,IsString string
@@ -34,11 +37,15 @@ decodeEntities dec =
   where
     start = await >>= maybe (return ()) (\token -> start' token >> start)
     start' (Text t) = (yield t >> yieldWhileText) =$= decodeEntities' dec =$= CL.mapMaybe go
+    start' (TagOpen name attrs closed) = yield (TagOpen name (map (second goAttr) attrs) closed)
     start' token = yield token
 
     go t
         | t == ""   = Nothing
         | otherwise = Just (Text t)
+
+    goAttr :: string -> string
+    goAttr t = mconcat $ runIdentity $ yield t $$ decodeEntities' dec =$ CL.consume
 
 decodeEntities' :: (Monad m
                    ,Monoid string

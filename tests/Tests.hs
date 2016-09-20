@@ -225,6 +225,11 @@ testcases =
   , text "foo &" "foo &"
   , text "foo &amp" "foo &amp"
   , text "foo &amp;" "foo &"
+
+  -- attribute entity decoding
+  , ( "<foo bar=\"&lt;&gt;\"/>"
+    , [TagOpen "foo" [("bar", "<>")] True]
+    )
   ]
   where text b a = ("<p>" <> b <> "</p>"
                    ,concat [[TagOpen "p" [] False],[Text a | not (T.null a)],[TagClose "p"]])
