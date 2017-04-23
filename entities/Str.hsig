@@ -1,0 +1,22 @@
+{-# LANGUAGE TypeSynonymInstances #-} -- bug!
+module Str where
+
+import Data.String
+
+data Str
+
+instance Monoid Str
+instance IsString Str
+instance Eq Str
+
+drop         :: Int -> Str -> Str
+decodeEntity :: Str -> Maybe Str
+uncons       :: Str -> Maybe (Char, Str)
+cons         :: Char -> Str -> Str
+break        :: (Char -> Bool) -> Str -> (Str, Str)
+append       :: Str -> Str -> Str
+unpack       :: Str -> String
+singleton    :: Char -> Str
+concat       :: [Str] -> Str
+empty        :: Str
+null         :: Str -> Bool
