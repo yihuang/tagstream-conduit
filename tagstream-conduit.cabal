@@ -45,6 +45,10 @@ Library
                      , blaze-builder
                      , xml-conduit >= 1.1.0.0
                      , data-default >= 0.5.0
+  -- this is needed to access Control.Monad.Fail on GHCs before 8.0
+  if !impl(ghc >= 8.0)
+    Build-depends:
+                       fail == 4.9.*
 
 test-suite test
     hs-source-dirs: tests

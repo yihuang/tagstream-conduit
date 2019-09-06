@@ -6,6 +6,7 @@ module Text.HTML.TagStream.ByteString where
 import qualified Blaze.ByteString.Builder as B
 import           Control.Applicative
 import           Control.Monad (unless)
+import qualified Control.Monad.Fail as Fail
 import           Data.Attoparsec.ByteString.Char8
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as S
@@ -229,7 +230,7 @@ showToken _ (Incomplete s) = B.fromByteString s
 -- }}}
 
 -- {{{ Stream
-tokenStream :: Monad m
+tokenStream :: Fail.MonadFail m
 #if MIN_VERSION_conduit(1, 0, 0)
             => Conduit ByteString m Token
 #else

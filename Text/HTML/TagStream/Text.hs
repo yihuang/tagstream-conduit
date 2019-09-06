@@ -5,6 +5,7 @@ module Text.HTML.TagStream.Text where
 
 import           Control.Applicative
 import           Control.Monad (unless, when, liftM)
+import qualified Control.Monad.Fail as Fail
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Resource (MonadThrow)
 import           Data.Char
@@ -246,7 +247,7 @@ showToken _ (Incomplete s) = B.fromText s
 -- }}}
 
 -- {{{ Stream
-tokenStream :: Monad m
+tokenStream :: Fail.MonadFail m
 #if MIN_VERSION_conduit(1, 0, 0)
             => Conduit Text m Token
 #else
@@ -273,7 +274,7 @@ tokenStream =
 -- | like `tokenStream', but it process `ByteString' input, decode it according to xml version tag.
 --
 -- Only support utf-8 and iso8859 for now.
-tokenStreamBS :: MonadThrow m
+tokenStreamBS :: (MonadThrow m, Fail.MonadFail m)
 #if MIN_VERSION_conduit(1, 0, 0)
               => Conduit ByteString m Token
 #else
