@@ -1,9 +1,0 @@
-module Builder where
-
-import Str
-
-data Builder
-instance Monoid Builder
-
-builderToStr :: Builder -> Str
-strToBuilder :: Str -> Builder
