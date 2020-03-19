@@ -160,7 +160,7 @@ decodeEntitiesText =
         , decUncons  = T.uncons }
   where decodeEntity entity =
           CL.sourceList ["&",entity,";"]
-          $= XML.parseText def { XML.psDecodeEntities = XML.decodeHtmlEntities }
+          $= XML.parseTextPos def { XML.psDecodeEntities = XML.decodeHtmlEntities }
           $= CL.map snd
           $$ XML.content
 
