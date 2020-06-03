@@ -1,5 +1,5 @@
 Name:                tagstream-conduit
-Version:             0.5.5.3
+Version:             0.5.6
 Synopsis:            streamlined html tag parser
 Description:
     Tag-stream is a library for parsing HTML//XML to a token stream.
@@ -19,7 +19,7 @@ Extra-source-files:    tests/Tests.hs
                      , Parse.hs
                      , HighlightText.hs
                      , ParseText.hs
-Cabal-version:       >=1.8
+Cabal-version:       >=1.10
 
 source-repository head
   type:     git
@@ -27,6 +27,7 @@ source-repository head
 
 Library
   GHC-Options:       -Wall -O2
+  Default-Language:  Haskell2010
   Exposed-modules:     Text.HTML.TagStream
                      , Text.HTML.TagStream.ByteString
                      , Text.HTML.TagStream.Text
@@ -51,6 +52,7 @@ Library
                        fail == 4.9.*
 
 test-suite test
+    Default-Language:  Haskell2010
     hs-source-dirs: tests
     main-is: Tests.hs
     type: exitcode-stdio-1.0
