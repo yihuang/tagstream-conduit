@@ -19,13 +19,14 @@ Extra-source-files:    tests/Tests.hs
                      , Parse.hs
                      , HighlightText.hs
                      , ParseText.hs
-Cabal-version:       >=1.8
+Cabal-version:       >=1.10
 
 source-repository head
   type:     git
   location: git://github.com/yihuang/tagstream-conduit
 
 Library
+  Default-Language:  Haskell2010
   GHC-Options:       -Wall -O2
   Exposed-modules:     Text.HTML.TagStream
                      , Text.HTML.TagStream.ByteString
@@ -47,6 +48,7 @@ Library
                      , data-default >= 0.5.0
 
 test-suite test
+    Default-Language: Haskell2010
     hs-source-dirs: tests
     main-is: Tests.hs
     type: exitcode-stdio-1.0
